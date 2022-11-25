@@ -1,0 +1,12 @@
+{
+  "name": "awesome_telegram_rss_bot",
+  "version": "1.0.0",
+  "description": "一个RSS机器人",
+  "main": "app.js",
+  "author": "ChenTian",
+  "license": "MIT",
+  "dependencies": {
+    "node-telegram-bot-api": "^0.60.0",
+    "rss-parser": "^3.12.0"
+  }
+}
