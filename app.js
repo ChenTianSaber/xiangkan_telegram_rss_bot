@@ -8,16 +8,39 @@ const parser = new Parser()
 const token = '5855692644:AAFrEAejzFq63pKtY4XmevxOtgfHIi-pFwg'
 const bot = new TelegramBot(token, { polling: true })
 
+// 定时拉取的定时器
+let intervalId = ""
+
 // 我的用户id
 const chatId = 1999271447
 
 // 我的订阅源列表
 const rssList = [
-    { link: 'https://chentiansaber.top/sspai/index', mode: 0 },
-    { link: 'https://chentiansaber.top/bilibili/followings/video/7554338', mode: 0 },
-    { link: 'https://www.ruanyifeng.com/blog/atom.xml', mode: 1 },
-    { link: 'https://chentiansaber.top/gamersky/news', mode: 0 }
+    {
+        link: 'https://chentiansaber.top/sspai/index',
+        mode: 0,
+        title: '少数派'
+    },
+    {
+        link: 'https://chentiansaber.top/bilibili/followings/video/7554338',
+        mode: 0,
+        title: '我关注的UP主'
+    },
+    {
+        link: 'https://www.ruanyifeng.com/blog/atom.xml',
+        mode: 1,
+        title: '阮一峰的日志'
+    },
+    {
+        link: 'https://chentiansaber.top/gamersky/news',
+        mode: 0,
+        title: '游民星空'
+    }
 ]
+
+// 所有已请求过的RSSItem，作为key，避免重复数据
+// TODO 在本地文件存储即可
+const readItemList = []
 
 /**
  * 定时拉取RSS内容，并通过机器人发送
@@ -40,6 +63,15 @@ async function requestAllRSSContent() {
             item.content = toEscapeMsg(item.content)
             item.contentSnippet = toEscapeMsg(item.contentSnippet).replace(/\s*/g, "")
 
+            // 对一些非法数据做友好展示
+            if (item.author == undefined) {
+                item.author = '佚名'
+            }
+
+            if (rss.title != undefined) {
+                feed.title = rss.title
+            }
+
             // 有些源直接用TG的网页预览就能很好的解析了
             // 有些源可能不行，此时就需要手动的展示标题和内容
             // mode: 0就展示作者和网页
@@ -58,7 +90,10 @@ async function requestAllRSSContent() {
         }
     }
 
-    bot.sendMessage(chatId, "已全部拉取完毕")
+
+    setTimeout(() => {
+        bot.sendMessage(chatId, "已全部拉取完毕")
+    }, 3000)
 }
 
 /**
@@ -93,4 +128,31 @@ function toEscapeMsg(text) {
  */
 bot.onText(/\/pull/, (msg, match) => {
     requestAllRSSContent()
+})
+
+/**
+ * 监听 /init 命令，然后开启定时拉取
+ */
+bot.onText(/\/init/, (msg, match) => {
+    if (intervalId == "") {
+        intervalId = setInterval(() => {
+            requestAllRSSContent()
+        }, 12 * 60 * 60)
+        bot.sendMessage(chatId, "已设置定时器，每12小时更新")
+    } else {
+        bot.sendMessage(chatId, "当前已经在定时拉取了哦")
+    }
+})
+
+/**
+ * 监听 /end 命令，结束循环拉取
+ */
+bot.onText(/\/end/, (msg, match) => {
+    if (intervalId == "") {
+        bot.sendMessage(chatId, "没有正在执行的定时器")
+        return
+    }
+    clearInterval(intervalId)
+    intervalId = ""
+    bot.sendMessage(chatId, "已清除定时器")
 })
